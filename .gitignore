@@ -1,0 +1,13 @@
+# Сборка Gradle и IDE
+.gradle/
+.kotlin/
+build/
+.idea/
+local.properties
+*.iml
+# Ключ подписи — только локально и в секрете репозитория ANDROID_KEYSTORE_BASE64
+keystore/
+# Результаты сборки релиза
+dist/
+*.apk
+.DS_Store

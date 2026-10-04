@@ -1,0 +1,125 @@
+# Сборка релиза: тег на коммите из master → два APK (экран akiba и служба пульта) в релизе
+# GitHub, описание релиза — сообщение коммита.
+#
+# Секреты и переменные репозитория:
+#   ANDROID_KEYSTORE_BASE64 (секрет, обязателен) — base64 от keystore/debug.keystore: той же
+#     подписью подписаны установленные на проекторе приложения, иначе обновление не встанет;
+#   UPDATE_KEY (переменная или секрет, необязательно) — открытый ключ подписи обновлений
+#     сервера (base64 DER); без него служба пульта не обновляет приложения с сервера.
+# Токен проектора в сборку не зашивается (релизы публичны): его прописывает install.sh.
+name: Релиз
+
+on:
+  push:
+    tags: ['*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Тег должен стоять на коммите из master
+        run: |
+          git fetch --no-tags origin master:refs/remotes/origin/master 2>/dev/null || true
+          ref=origin/master
+          git rev-parse -q --verify "$ref" >/dev/null || ref=master
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "$ref"; then
+            echo "Коммит тега $GITHUB_REF_NAME не входит в master — релиз не собирается"
+            exit 1
+          fi
+
+      # JDK, Android SDK и Gradle — обычными шагами, без сторонних действий и без изменения PATH
+      # (так workflow проверяется и локально через act). На GitHub берутся предустановленные
+      # JDK 17 и Android SDK, недостающее скачивается.
+      - name: JDK 17
+        run: |
+          if [ -n "${JAVA_HOME_17_X64:-}" ]; then
+            jdk="$JAVA_HOME_17_X64"
+          else
+            jdk="$RUNNER_TEMP/jdk17"
+            mkdir -p "$jdk"
+            curl -fsSL "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse" \
+              | tar -xz -C "$jdk" --strip-components=1
+          fi
+          "$jdk/bin/java" -version
+          echo "JAVA_HOME=$jdk" >> "$GITHUB_ENV"
+
+      - name: Android SDK (платформа 36, build-tools 35.0.0)
+        run: |
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          [ -n "$sdk" ] || sdk="$RUNNER_TEMP/android-sdk"
+          tools="$sdk/cmdline-tools/latest/bin"
+          if [ ! -x "$tools/sdkmanager" ]; then
+            curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -o /tmp/clt.zip
+            mkdir -p "$sdk/cmdline-tools"
+            unzip -q /tmp/clt.zip -d "$sdk/cmdline-tools"
+            rm -rf "$sdk/cmdline-tools/latest"
+            mv "$sdk/cmdline-tools/cmdline-tools" "$sdk/cmdline-tools/latest"
+          fi
+          export PATH="$JAVA_HOME/bin:$PATH"
+          yes | "$tools/sdkmanager" --sdk_root="$sdk" --licenses > /dev/null || true
+          "$tools/sdkmanager" --sdk_root="$sdk" --install "platforms;android-36" "build-tools;35.0.0" > /dev/null
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+
+      - name: Gradle 8.14.5 (с проверкой контрольной суммы дистрибутива)
+        run: |
+          url=https://services.gradle.org/distributions/gradle-8.14.5-bin.zip
+          curl -fsSL "$url" -o /tmp/gradle.zip
+          echo "$(curl -fsSL "$url.sha256")  /tmp/gradle.zip" | sha256sum -c -
+          unzip -q /tmp/gradle.zip -d "$RUNNER_TEMP"
+          echo "GRADLE=$RUNNER_TEMP/gradle-8.14.5/bin/gradle" >> "$GITHUB_ENV"
+
+      - name: Ключ подписи
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "Нет секрета ANDROID_KEYSTORE_BASE64: без прежнего ключа подписи APK не обновит установленные приложения"
+            exit 1
+          fi
+          mkdir -p keystore
+          echo "$KEYSTORE" | base64 -d > keystore/debug.keystore
+
+      - name: Сборка APK
+        env:
+          UPDATE_KEY: ${{ vars.UPDATE_KEY || secrets.UPDATE_KEY }}
+        run: |
+          # versionCode — минуты с 1970 года: растёт с каждой сборкой, по нему проектор понимает,
+          # что версия новее установленной.
+          props=("-Pscreennode.versionCode=$(( $(date +%s) / 60 ))")
+          [ -n "$UPDATE_KEY" ] && props+=("-Pscreennode.updateKey=$UPDATE_KEY")
+          export PATH="$JAVA_HOME/bin:$PATH"
+          # Модули app и remote независимы — собираются параллельно; памяти Gradle — с запасом
+          # на два компилятора Kotlin одновременно.
+          "$GRADLE" --no-daemon --console=plain --parallel \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+            "${props[@]}" :app:assembleDebug :remote:assembleDebug
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/*.apk dist/akiba.apk
+          cp remote/build/outputs/apk/debug/*.apk dist/akiba-remote.apk
+
+      - name: Описание релиза — сообщение коммита
+        run: git log -1 --format=%B "$GITHUB_SHA" > dist/notes.md
+
+      - name: Релиз
+        if: ${{ !env.ACT }}
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: dist/notes.md
+          files: |
+            dist/akiba.apk
+            dist/akiba-remote.apk
+
+      - name: Проверка в act (релиз не создаётся)
+        if: ${{ env.ACT }}
+        run: |
+          ls -la dist
+          echo "--- описание релиза ---"
+          cat dist/notes.md

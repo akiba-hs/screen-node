@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#15171a">
+  <title>Пульт проектора</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="remote.css">
+</head>
+<!-- Страницу пульта раздаёт сама служба пульта на проекторе (space.akiba.remote): команды
+     идут напрямую на проектор, без сервера. style.css — копия стилей страницы трансляции
+     сервера. -->
+<body class="rc-page">
+  <header class="rc-head">
+    <a id="rc-back" class="rc-back" href="#" hidden>← Трансляция</a>
+    <div id="rc-status" class="status status--offline" role="status" aria-live="polite">
+      <span class="status__dot"></span>
+      <span id="rc-status-text">Подключение к серверу…</span>
+    </div>
+    <p id="rc-volume" class="rc-volume" hidden></p>
+  </header>
+
+  <!-- Пульт повторяет пульт Wanbo X2: кнопки нажимаются и удерживаются как настоящие. -->
+  <section class="remote" aria-label="Пульт проектора">
+    <div class="remote__leds"><span></span><span></span></div>
+
+    <div class="remote__row">
+      <button class="rbtn" data-key="power" data-confirm="Выключить проектор?" aria-label="Питание" title="Питание">
+        <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+      </button>
+      <button class="rbtn" id="rc-mouse" aria-label="Мышь" title="Мышь: курсор с этого устройства">
+        <svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v3"/></svg>
+      </button>
+      <button class="rbtn" data-key="menu" aria-label="Меню" title="Меню">
+        <svg viewBox="0 0 24 24"><path d="M6 7h12M6 12h12M6 17h12"/></svg>
+      </button>
+    </div>
+
+    <svg class="dpad" viewBox="0 0 200 200" aria-label="Стрелки и ОК">
+      <g class="dpad__ring">
+        <path class="dpad__seg" data-key="up" role="button" aria-label="Вверх" d="M29.3 29.3A100 100 0 0 1 170.7 29.3L134.6 65.4A49 49 0 0 0 65.4 65.4Z"/>
+        <path class="dpad__seg" data-key="right" role="button" aria-label="Вправо" d="M170.7 29.3A100 100 0 0 1 170.7 170.7L134.6 134.6A49 49 0 0 0 134.6 65.4Z"/>
+        <path class="dpad__seg" data-key="down" role="button" aria-label="Вниз" d="M170.7 170.7A100 100 0 0 1 29.3 170.7L65.4 134.6A49 49 0 0 0 134.6 134.6Z"/>
+        <path class="dpad__seg" data-key="left" role="button" aria-label="Влево" d="M29.3 170.7A100 100 0 0 1 29.3 29.3L65.4 65.4A49 49 0 0 0 65.4 134.6Z"/>
+      </g>
+      <g class="dpad__marks" aria-hidden="true">
+        <path d="M94 22l6-6 6 6"/><path d="M178 94l6 6-6 6"/><path d="M94 178l6 6 6-6"/><path d="M22 94l-6 6 6 6"/>
+      </g>
+      <circle class="dpad__ok" data-key="ok" role="button" aria-label="ОК" cx="100" cy="100" r="46"/>
+    </svg>
+
+    <div class="remote__row remote__row--wide">
+      <button class="rbtn" data-key="settings" aria-label="Настройки" title="Настройки">
+        <svg viewBox="0 0 24 24"><path d="M12 3.5l7.4 4.25v8.5L12 20.5l-7.4-4.25v-8.5Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+      </button>
+      <button class="rbtn" data-key="mute" aria-label="Без звука" title="Без звука">
+        <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4Z"/><path d="M5 4l14 16"/></svg>
+      </button>
+    </div>
+
+    <div class="remote__grid">
+      <div class="rocker">
+        <button class="rbtn rbtn--half" data-key="focus_cw" aria-label="Фокус: повернуть вправо" title="Фокус вправо">
+          <svg viewBox="0 0 24 24"><path d="M18.5 12a6.5 6.5 0 1 1-2.2-4.9"/><path d="M17 3.5v4h-4"/></svg>
+        </button>
+        <button class="rbtn rbtn--half" data-key="focus_ccw" aria-label="Фокус: повернуть влево" title="Фокус влево">
+          <svg viewBox="0 0 24 24"><path d="M5.5 12a6.5 6.5 0 1 0 2.2-4.9"/><path d="M7 3.5v4h4"/></svg>
+        </button>
+      </div>
+      <div class="remote__col">
+        <button class="rbtn" data-key="back" aria-label="Назад" title="Назад">
+          <svg viewBox="0 0 24 24"><path d="M9 7L5.5 10.5 9 14"/><path d="M5.5 10.5H14a4.5 4.5 0 0 1 0 9H8"/></svg>
+        </button>
+        <button class="rbtn" data-key="home" aria-label="Домой" title="Домой">
+          <svg viewBox="0 0 24 24"><path d="M4.5 11.5L12 5l7.5 6.5"/><path d="M6.5 10v9h11v-9"/></svg>
+        </button>
+      </div>
+      <div class="rocker">
+        <button class="rbtn rbtn--half" data-key="vol_up" aria-label="Громче" title="Громче">
+          <svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg>
+        </button>
+        <button class="rbtn rbtn--half" data-key="vol_down" aria-label="Тише" title="Тише">
+          <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="remote__brand">wanbo</div>
+  </section>
+
+  <!-- Громкость: шаг 8. -->
+  <input id="rc-vol" class="rc-vol" type="range" min="0" max="100" step="8" aria-label="Громкость">
+
+  <section class="card rc-card" aria-label="Источники">
+    <h2>Источники</h2>
+    <div class="rc-launch">
+      <button class="btn" data-launch="hdmi1">HDMI 1</button>
+      <button class="btn" data-launch="hdmi2">HDMI 2</button>
+      <button class="btn" data-launch="av">AV</button>
+      <button class="btn" data-launch="usb" title="Файлы с USB-накопителя">USB</button>
+    </div>
+  </section>
+
+  <!-- Приложения: каждый выносит себе на пульт нужные из общего списка («Все приложения»). -->
+  <section class="card rc-card" aria-label="Приложения">
+    <div class="rc-card__head">
+      <h2>Приложения</h2>
+      <button class="btn btn--small" id="rc-fav-edit" title="Убрать приложения с пульта или поменять порядок">Изменить</button>
+    </div>
+    <div id="rc-favs" class="rc-launch"></div>
+    <p id="rc-fav-hint" class="hint" hidden>Нажмите ✕, чтобы убрать приложение с пульта, ← и → — чтобы переставить.
+      Добавить — в «Все приложения» (звёздочка ☆).</p>
+    <div class="rc-launch rc-launch--after">
+      <button class="btn btn--primary" id="rc-apps-open">Все приложения</button>
+    </div>
+  </section>
+
+  <section class="card rc-card" aria-label="Обслуживание проектора">
+    <h2>Обслуживание</h2>
+    <div class="rc-launch">
+      <button class="btn" data-key="autofocus" title="Заново настроить фокус, как после включения">Автофокус</button>
+      <button class="btn" data-launch="android_settings" title="Стандартные настройки Android, а не упрощённые от производителя">Настройки Android</button>
+    </div>
+  </section>
+
+  <!-- Все приложения проектора: названия на языке этой страницы, значки как в лаунчере.
+       Звёздочка — вынести приложение себе на пульт. -->
+  <dialog id="rc-apps" class="rc-apps" aria-label="Приложения проектора">
+    <div class="rc-apps__head">
+      <input id="rc-apps-search" class="rc-apps__search" type="search" autocomplete="off" spellcheck="false"
+        placeholder="Поиск по названию или пакету">
+      <button class="btn" id="rc-apps-close" aria-label="Закрыть">✕</button>
+    </div>
+    <p id="rc-apps-status" class="hint"></p>
+    <div id="rc-apps-list" class="rc-apps__list"></div>
+  </dialog>
+
+  <section class="card rc-card" id="rc-input" aria-label="Мышь и клавиатура">
+    <h2>Мышь и клавиатура</h2>
+
+    <!-- Компьютер: курсор и клавиатура перехватываются целиком. -->
+    <div class="rc-desktop">
+      <div class="actions">
+        <button id="rc-pointer" class="btn">Захватить курсор</button>
+        <button id="rc-keyboard" class="btn">Захватить клавиатуру</button>
+        <button id="rc-paste" class="btn" title="Напечатать на проекторе текст из буфера обмена этого компьютера">Вставить из буфера</button>
+      </div>
+      <!-- Без HTTPS браузер не даёт скрипту читать буфер обмена — тогда текст ловится вставкой. -->
+      <div id="rc-paste-box" class="rc-paste" hidden>
+        <textarea id="rc-paste-catch" class="rc-text" rows="2" placeholder="Нажмите Ctrl+V (на Mac — ⌘V): текст уйдёт на проектор"></textarea>
+        <button id="rc-paste-cancel" class="btn">Отмена</button>
+      </div>
+      <p id="rc-desktop-hint" class="hint">Курсор: движения мыши и тачпада уходят на проектор, Esc — отпустить.
+        Клавиатура: всё, что вы печатаете, — на любом языке — появляется на проекторе.
+        «Вставить из буфера» печатает на проекторе скопированный текст.</p>
+    </div>
+
+    <!-- Телефон: тачпад и поле ввода. -->
+    <div class="rc-touch">
+      <div id="rc-pad" class="pad" aria-label="Тачпад">
+        <span class="pad__hint">Тачпад: веди пальцем — курсор, тап — клик,<br>два пальца — прокрутка, тап двумя — «назад»,<br>удержание — перетаскивание</span>
+      </div>
+      <div class="pad__buttons">
+        <button class="btn" data-button="left">Клик</button>
+        <button class="btn" data-button="right">Назад (правая)</button>
+      </div>
+      <textarea id="rc-text" class="rc-text" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
+        placeholder="Нажмите и печатайте — текст сразу уходит на проектор"></textarea>
+    </div>
+    <p id="rc-ime-note" class="notice" hidden></p>
+  </section>
+
+  <!-- Область захвата курсора (Pointer Lock): невидимая, на весь экран. -->
+  <div id="rc-lock" class="rc-lock" hidden>
+    <div class="rc-lock__badge">Курсор на проекторе · Esc — отпустить</div>
+  </div>
+  <div id="rc-kbd-badge" class="rc-kbd-badge" hidden>Клавиатура на проекторе · нажмите «Отпустить клавиатуру», чтобы вернуть</div>
+
+  <script src="remote.js"></script>
+</body>
+</html>

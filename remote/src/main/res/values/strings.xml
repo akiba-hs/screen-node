@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Пульт akiba</string>
+    <string name="ime_name">Пульт akiba</string>
+    <string name="remote_channel">Пульт</string>
+    <string name="remote_notification">Веб-пульт проектора подключён</string>
+    <string name="update_confirm_name">Обновление akiba</string>
+    <string name="update_confirm_description">Подтверждает установку обновлений akiba, проверенных по подписи сервера. Включается только на время установки.</string>
+</resources>

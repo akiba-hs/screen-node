@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Служба веб-пульта: отдельное приложение без экранов (почему — см. RemoteService). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Переключение на клавиатуру пульта для печати текста. Выдаётся только через adb
+         (install.sh: pm grant … WRITE_SECURE_SETTINGS), один раз; без него печатается
+         латиница. Им же служба включает на время установки подтверждение обновлений. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Обновление akiba и самой службы с сервера (Updater). Без владельца устройства система
+         спрашивает подтверждение; право «установка неизвестных приложений» выдаёт
+         install.sh (appops REQUEST_INSTALL_PACKAGES allow). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Приложения и входы, которые открывает пульт (видимость пакетов на Android 11+). -->
+    <queries>
+        <package android:name="space.akiba.screen_node" />
+        <package android:name="org.jellyfin.androidtv" />
+        <package android:name="com.google.android.youtube.tv" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.newlink.nlsource" />
+        <package android:name="com.newlink.filemanager" />
+        <package android:name="com.hisilicon.tvui" />
+        <package android:name="com.zhiying.bluetoothmodelservice" />
+        <package android:name="com.hisilicon.miracast" />
+        <package android:name="com.ecloud.eairplay" />
+        <package android:name="org.videolan.vlc" />
+        <package android:name="mark.via.gp" />
+        <package android:name="mark.via" />
+        <package android:name="com.android.tv.settings" />
+        <package android:name="com.android.settings" />
+        <!-- Список приложений на странице пульта: всё, что можно запустить из лаунчера. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_remote"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic: связь с сервером по ws:// внутри LAN. -->
+
+        <!-- exported: запускают install.sh (am start-foreground-service) и экран
+             akiba — так снимается «остановленное» состояние нового пакета. Команды служба берёт
+             только со своей страницы пульта по пропуску сервера. -->
+        <service
+            android:name=".RemoteService"
+            android:exported="true"
+            android:foregroundServiceType="specialUse"
+            tools:ignore="ExportedService">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Веб-пульт проектора: кнопки, мышь и клавиатура по сети" />
+        </service>
+
+        <!-- Невидимая клавиатура пульта: печать текста на любом языке. -->
+        <service
+            android:name=".RemoteIme"
+            android:exported="true"
+            android:label="@string/ime_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/remote_ime" />
+        </service>
+
+        <!-- BOOT_COMPLETED — защищённое системное сообщение, подделать его нельзя.
+             Его получатели обслуживаются по очереди, на проекторе — около 3 минут (впереди
+             медленные Google-службы). Поэтому высокий приоритет и ещё LOCKED_BOOT_COMPLETED:
+             оно приходит раньше (directBootAware — чтобы его получить). -->
+        <receiver
+            android:name=".BootReceiver"
+            android:directBootAware="true"
+            android:exported="true">
+            <intent-filter android:priority="999">
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Смена адреса сервера и токена — только из оболочки adb (разрешение DUMP есть у неё,
+             обычному приложению его не выдать). См. ConfigReceiver и install.sh. -->
+        <receiver
+            android:name="space.akiba.screen_node.ConfigReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="space.akiba.SET_SERVER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Служебные команды из adb: проверить обновления, снять владельца устройства. -->
+        <receiver
+            android:name=".ShellReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="space.akiba.remote.CHECK_UPDATE" />
+                <action android:name="space.akiba.remote.CLEAR_OWNER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Администратор устройства: владельцем устройства службу делает adb
+             (dpm set-device-owner) — тогда обновления ставятся без подтверждения. -->
+        <receiver
+            android:name=".AdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Подтверждение установки обновления (без владельца устройства): видит только окна
+             установщика пакетов и включается лишь на время установки. См. UpdateConfirmService. -->
+        <service
+            android:name=".UpdateConfirmService"
+            android:exported="false"
+            android:label="@string/update_confirm_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/update_confirm" />
+        </service>
+
+        <!-- Результат установки обновления (PackageInstaller шлёт его сюда же, в приложение). -->
+        <receiver
+            android:name=".Updater$InstallReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

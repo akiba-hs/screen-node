@@ -1,0 +1,215 @@
+/* Страница пульта. Сам пульт нарисован как настоящий Wanbo: белый корпус, чёрные кнопки —
+   одинаково в светлой и тёмной теме. */
+
+.rc-page { padding: 20px 16px 48px; row-gap: 16px; }
+
+.rc-head { width: 100%; max-width: 560px; display: grid; gap: 6px; }
+.rc-back { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 15px; }
+.rc-volume { margin: 0; color: var(--muted); font-size: 14px; }
+
+.remote {
+  --rb: #1b1c1e;          /* кнопки */
+  --rb-press: #3a3c40;
+  --rb-icon: #e9eaec;
+  width: min(300px, 88vw);
+  padding: 22px 26px 26px;
+  border-radius: 60px / 44px;
+  background: linear-gradient(180deg, #fbfbfb, #ecedef);
+  box-shadow: 0 1px 0 #fff inset, 0 10px 30px rgba(0, 0, 0, .18), 0 0 0 1px rgba(0, 0, 0, .06);
+  display: grid;
+  justify-items: center;
+  row-gap: 18px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.remote__leds { display: flex; gap: 120px; height: 6px; }
+.remote__leds span { width: 4px; height: 4px; border-radius: 50%; background: #9a9ca0; }
+
+.remote__row { width: 100%; display: flex; justify-content: space-between; }
+.remote__row--wide { padding: 0 2px; }
+
+.rbtn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: var(--rb);
+  box-shadow: 0 3px 0 #000, 0 4px 8px rgba(0, 0, 0, .25);
+  cursor: pointer;
+  touch-action: none;
+  transition: transform .05s, background .05s;
+}
+.rbtn svg { width: 24px; height: 24px; fill: none; stroke: var(--rb-icon); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rbtn:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.rbtn.is-down, .dpad .is-down { background: var(--rb-press); transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+.rbtn.is-on { box-shadow: 0 3px 0 #000, 0 0 0 3px var(--primary); }
+
+.dpad { width: min(232px, 72vw); height: auto; touch-action: none; overflow: visible; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .25)); }
+.dpad__seg { fill: var(--rb); cursor: pointer; }
+.dpad__seg.is-down { fill: var(--rb-press); transform: none; }
+.dpad__marks path { fill: none; stroke: #55575c; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.dpad__ok { fill: #232427; stroke: #0d0d0e; stroke-width: 3; cursor: pointer; }
+.dpad__ok.is-down { fill: var(--rb-press); }
+.dpad :focus-visible { outline: none; stroke: var(--primary); stroke-width: 4; }
+
+.remote__grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center; align-items: start; }
+.remote__col { display: grid; row-gap: 26px; padding-top: 8px; }
+
+/* «Качели» фокуса и громкости: одна вытянутая кнопка из двух половинок. */
+.rocker {
+  display: grid;
+  width: 60px;
+  border-radius: 30px;
+  background: var(--rb);
+  box-shadow: 0 3px 0 #000, 0 4px 8px rgba(0, 0, 0, .25);
+  overflow: hidden;
+}
+.rbtn--half { width: 60px; height: 76px; border-radius: 0; box-shadow: none; background: transparent; }
+.rbtn--half.is-down { background: var(--rb-press); box-shadow: none; transform: none; }
+
+.remote__brand {
+  margin-top: 26px;
+  color: #a2a4a8;
+  font: 300 22px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: .14em;
+}
+
+.rc-vol { width: 100%; max-width: 560px; accent-color: var(--primary); }
+.rc-page.is-locked .rc-vol { opacity: .5; pointer-events: none; }
+
+.rc-card h2 { margin: 0 0 14px; font-size: 18px; font-weight: 600; }
+.rc-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rc-card__head .btn { margin-bottom: 14px; }
+.rc-launch { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.rc-launch .btn { padding: 12px 10px; }
+.rc-launch--after { margin-top: 10px; }
+.rc-launch:empty { display: none; }
+#rc-fav-hint { margin: 10px 0 0; }
+
+/* Режим «Изменить»: у кнопок приложений — убрать и переставить. */
+.rc-fav { position: relative; display: grid; }
+.rc-fav__tools { display: none; position: absolute; inset: auto 4px 4px auto; gap: 4px; }
+.rc-favs--edit .rc-fav__tools { display: flex; }
+.rc-favs--edit .rc-fav > .btn { padding-bottom: 34px; }
+.rc-fav__tool {
+  width: 28px; height: 28px; padding: 0; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  font: inherit; font-size: 14px; cursor: pointer;
+}
+.rc-fav__tool--del { color: var(--danger); }
+
+.rc-paste { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin: 10px 0 0; }
+
+/* Проектор забронирован не вами: пульт только показывает состояние. */
+.rc-page.is-locked .remote, .rc-page.is-locked .rc-card:not(.rc-keep) { opacity: .5; pointer-events: none; }
+
+.btn.is-on { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+
+/* Компьютер или телефон: показываем подходящий способ ввода. */
+.rc-touch { display: none; }
+@media (pointer: coarse) {
+  .rc-desktop { display: none; }
+  .rc-touch { display: block; }
+}
+
+.pad {
+  position: relative;
+  height: 260px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--muted) 35%, transparent) 1px, transparent 0) 0 0 / 18px 18px,
+    color-mix(in srgb, var(--bg) 70%, var(--card));
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pad.is-active { border-color: var(--primary); }
+.pad__hint { color: var(--muted); font-size: 13px; text-align: center; line-height: 1.6; pointer-events: none; }
+.pad__buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 14px; }
+.pad__buttons .btn { touch-action: none; }
+
+.rc-text {
+  width: 100%;
+  font: inherit;
+  font-size: 16px; /* меньше 16px — iOS увеличивает страницу при фокусе */
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  resize: none;
+}
+.rc-text:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
+
+.rc-lock { position: fixed; inset: 0; z-index: 10; cursor: none; background: rgba(0, 0, 0, .35); display: grid; place-items: start center; }
+.rc-lock__badge, .rc-kbd-badge {
+  margin-top: 16px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+}
+.rc-kbd-badge { position: fixed; left: 50%; top: 0; transform: translateX(-50%); z-index: 9; }
+
+.remote.is-offline { opacity: .55; }
+
+/* Окно «Все приложения». */
+.rc-apps {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--text);
+}
+.rc-apps::backdrop { background: rgba(0, 0, 0, .5); }
+.rc-apps[open] { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; }
+.rc-apps__head { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.rc-apps__search {
+  font: inherit;
+  font-size: 16px; /* меньше 16px — iOS увеличивает страницу при фокусе */
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.rc-apps .hint { margin: 0; }
+.rc-apps__list { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.rc-app {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  min-width: 0;
+}
+.rc-app:hover, .rc-app:focus-visible { border-color: var(--primary); }
+.rc-app-wrap { position: relative; display: grid; }
+.rc-app__star {
+  position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+  font-size: 20px; line-height: 1; cursor: pointer;
+}
+.rc-app__star.is-on { color: var(--warn); }
+.rc-app__star:hover, .rc-app__star:focus-visible { background: var(--card); }
+.rc-app img { width: 48px; height: 48px; }
+.rc-app__label { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.rc-app__pkg { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
