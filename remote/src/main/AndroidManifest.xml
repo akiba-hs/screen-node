@@ -145,6 +145,21 @@
                 android:resource="@xml/update_confirm" />
         </service>
 
+        <!-- Экран akiba вместо лаунчера прошивки после включения проектора: замечает появление
+             лаунчера. Включается только на пару минут после включения. См. HomeWatchService. -->
+        <service
+            android:name=".HomeWatchService"
+            android:exported="false"
+            android:label="@string/home_watch_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/home_watch" />
+        </service>
+
         <!-- Результат установки обновления (PackageInstaller шлёт его сюда же, в приложение). -->
         <receiver
             android:name=".Updater$InstallReceiver"

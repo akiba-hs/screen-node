@@ -148,6 +148,7 @@ class RemoteService : Service(), SignalingClient.Listener, LocalServer.Listener 
         // Служба подтверждения обновлений могла остаться включённой, если процесс завершила
         // установка самой службы пульта, — выключаем.
         UpdateConfirmService.disable(this)
+        HomeWatchService.disable(this) // и наблюдение за лаунчером после включения — тоже
         updater.onAkibaUpdated = { startSafely(Intent(Intent.ACTION_MAIN).setComponent(AKIBA)) }
         instance = this
 
@@ -179,12 +180,47 @@ class RemoteService : Service(), SignalingClient.Listener, LocalServer.Listener 
     /** Проверить обновления на сервере (подсказка сервера, таймер или adb). */
     fun checkUpdates() = updater.check()
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Проектор только что включили (см. BootReceiver).
+        if (intent?.getBooleanExtra(EXTRA_OPEN_AKIBA, false) == true) openAkibaInsteadOfHome()
+        return START_STICKY
+    }
+
+    /**
+     * После включения проектора — экран akiba вместо лаунчера прошивки. Прошивка сначала
+     * фокусирует объектив и ищет сигнал HDMI, лаунчер открывает потом — тогда и открываем akiba
+     * (см. [HomeWatchService]). Нашёлся HDMI — лаунчера не будет, и akiba не открывается.
+     */
+    private fun openAkibaInsteadOfHome() {
+        main.removeCallbacks(stopHomeWatch)
+        var seen = false
+        HomeWatchService.onHome = {
+            launch("akiba")
+            // Лаунчер открывается в несколько приёмов (заставка, затем главный экран): следим
+            // ещё немного, чтобы он не перекрыл akiba.
+            if (!seen) {
+                seen = true
+                main.removeCallbacks(stopHomeWatch)
+                main.postDelayed(stopHomeWatch, HOME_SETTLE_MS)
+            }
+        }
+        if (HomeWatchService.enable(this)) {
+            main.postDelayed(stopHomeWatch, HOME_WATCH_MS)
+        } else {
+            // Нет права включить наблюдение за лаунчером — открываем akiba сразу.
+            HomeWatchService.onHome = null
+            launch("akiba")
+        }
+    }
+
+    private val stopHomeWatch = Runnable { HomeWatchService.disable(this) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         instance = null
+        main.removeCallbacks(stopHomeWatch)
+        HomeWatchService.disable(this)
         ServerConfig.removeListener(onConfigChanged)
         local?.stop()
         local = null
@@ -750,6 +786,11 @@ class RemoteService : Service(), SignalingClient.Listener, LocalServer.Listener 
         // Экран проектора akiba — в основном приложении; флаг — «открыт под трансляцию».
         private val AKIBA = ComponentName("space.akiba.screen_node", "space.akiba.screen_node.MainActivity")
         private const val EXTRA_STREAM = "stream"
+        private const val EXTRA_OPEN_AKIBA = "open_akiba"
+        // Сколько после включения ждать лаунчер прошивки (фокусировка и поиск HDMI идут до него)
+        // и сколько следить за ним после первого появления.
+        private const val HOME_WATCH_MS = 120_000L
+        private const val HOME_SETTLE_MS = 6_000L
 
         /** Запущенная служба (для служебных команд из adb, см. [ShellReceiver]). */
         var instance: RemoteService? = null
@@ -765,9 +806,11 @@ class RemoteService : Service(), SignalingClient.Listener, LocalServer.Listener 
             ComponentName("com.hisilicon.tvui", "com.hisilicon.tvui.MainActivity"),
         )
 
-        fun start(context: Context) {
+        /** openAkiba — заодно открыть экран akiba (при включении проектора). */
+        fun start(context: Context, openAkiba: Boolean = false) {
             try {
-                ContextCompat.startForegroundService(context, Intent(context, RemoteService::class.java))
+                val intent = Intent(context, RemoteService::class.java).putExtra(EXTRA_OPEN_AKIBA, openAkiba)
+                ContextCompat.startForegroundService(context, intent)
             } catch (e: Exception) {
                 // Новые Android запрещают запуск служб из фона; на проекторе (Android 9) этого нет.
                 Log.w(TAG, "не удалось запустить службу пульта", e)

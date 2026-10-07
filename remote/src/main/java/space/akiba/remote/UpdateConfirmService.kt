@@ -1,11 +1,9 @@
 package space.akiba.remote
 
 import android.accessibilityservice.AccessibilityService
-import android.content.ComponentName
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 
@@ -74,16 +72,9 @@ class UpdateConfirmService : AccessibilityService() {
         /** Пакет, обновление которого ждёт подтверждения; null — ничего не нажимать. */
         @Volatile var awaiting: String? = null
 
-        private fun id(context: Context) = ComponentName(context, UpdateConfirmService::class.java).flattenToString()
-
         /** Включить службу (на время установки). false — нет права менять настройки. */
         fun enable(context: Context): Boolean = try {
-            val r = context.contentResolver
-            val list = enabled(context)
-            if (id(context) !in list) {
-                Settings.Secure.putString(r, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, (list + id(context)).joinToString(":"))
-            }
-            Settings.Secure.putInt(r, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
+            AccessibilitySwitch.enable(context, UpdateConfirmService::class.java)
             true
         } catch (e: SecurityException) {
             Log.w(TAG, "подтверждение обновлений: нет права WRITE_SECURE_SETTINGS")
@@ -94,20 +85,12 @@ class UpdateConfirmService : AccessibilityService() {
         fun disable(context: Context) {
             awaiting = null
             try {
-                val list = enabled(context)
-                if (id(context) !in list) return
-                val rest = list - id(context)
-                val r = context.contentResolver
-                Settings.Secure.putString(r, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, rest.joinToString(":"))
-                if (rest.isEmpty()) Settings.Secure.putInt(r, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
-                Log.i(TAG, "подтверждение обновлений: служба выключена")
+                if (AccessibilitySwitch.disable(context, UpdateConfirmService::class.java)) {
+                    Log.i(TAG, "подтверждение обновлений: служба выключена")
+                }
             } catch (e: SecurityException) {
                 Log.w(TAG, "подтверждение обновлений: не удалось выключить службу")
             }
         }
-
-        private fun enabled(context: Context): List<String> =
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-                .orEmpty().split(':').filter { it.isNotBlank() }
     }
 }

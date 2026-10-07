@@ -6,4 +6,6 @@
     <string name="remote_notification">Веб-пульт проектора подключён</string>
     <string name="update_confirm_name">Обновление akiba</string>
     <string name="update_confirm_description">Подтверждает установку обновлений akiba, проверенных по подписи сервера. Включается только на время установки.</string>
+    <string name="home_watch_name">Экран akiba при включении</string>
+    <string name="home_watch_description">Открывает экран akiba вместо главного экрана после включения проектора. Включается только на пару минут после включения.</string>
 </resources>
